@@ -23,7 +23,7 @@ class MLTrader(Strategy):
         )
         self.sentiment_across_prob = []
         self.sentiment_across_valence = []
-        self.today = []
+        self.date = []
 
     def position_sizing(self):
         cash = self.get_cash()
@@ -33,7 +33,7 @@ class MLTrader(Strategy):
 
     def get_dates(self):
         today = self.get_datetime()
-        self.today.append(today)
+        
         three_days_prior = today - Timedelta(days=3)
         return today.strftime("%Y-%m-%d"), three_days_prior.strftime("%Y-%m-%d")
 
@@ -47,11 +47,12 @@ class MLTrader(Strategy):
     def on_trading_iteration(self):
         cash, last_price, quantity = self.position_sizing()
         probability, sentiment = self.get_sentiment()
-        self.sentiment_across_prob.append(probability)
-        self.sentiment_across_valence.append(sentiment)
+        #self.date.append(self.get_datetime())
+        #self.sentiment_across_prob.append(probability)
+        #self.sentiment_across_valence.append(sentiment)
 
         if cash > last_price:
-            if sentiment == "positive" and probability > 0.999:
+            if sentiment == "positive" and probability > 0.9:
                 if self.last_trade == "sell":
                     self.sell_all()
                 order = self.create_order(
@@ -64,7 +65,7 @@ class MLTrader(Strategy):
                 )
                 self.submit_order(order)
                 self.last_trade = "buy"
-            elif sentiment == "negative" and probability > 0.999:
+            elif sentiment == "negative" and probability > 0.9:
                 if self.last_trade == "buy":
                     self.sell_all()
                 order = self.create_order(
@@ -79,22 +80,22 @@ class MLTrader(Strategy):
                 self.last_trade = "sell"
 
 
-start_date = datetime(2023, 1, 1)
-end_date = datetime(2024, 8, 22)
+start_date = datetime(2024, 3, 22)
+end_date = datetime.today()
 broker = Alpaca(ALPACA_CREDS_PAPER)
 strategy = MLTrader(
-    name="mlstrat", broker=broker, parameters={"symbol": "SPY", "cash_at_risk": 0.5}
+    name="mlstrat", broker=broker, parameters={"symbol": "SPY", "cash_at_risk": 0.5}, budget=10000
 )
 strategy.backtest(
     YahooDataBacktesting,
     start_date,
     end_date,
-    parameters={"symbol": "SPY", "cash_at_risk": 0.5},
 )
-pd.DataFrame(
+"""pd.DataFrame(
     {
-        "date": strategy.today,
+       # "date": strategy.date,
         "prob": strategy.sentiment_across_prob,
         "valence": strategy.sentiment_across_valence,
     }
 ).to_csv("./logs/sentiment.csv")
+"""
